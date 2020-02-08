@@ -10,7 +10,31 @@ This crate provides integration support between `coi` and `actix-web`.
 
 ## Example
 
-(TODO)
+In your `Cargo.toml`
+```toml
+[dependencies]
+coi = { package = "coi-actix-web", version = "0.4.0" }
+```
+
+> ### Note
+> It's important to rename the package to `coi` since it re-exports proc-macros from the `coi` crate, which expects the crate to be named `coi`.
+
+and in your code:
+
+```rust
+use coi::inject;
+...
+
+#[inject]
+async get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, ()> {
+    let name = service.get(*id).await.map_err(|e| log::error!("{}", e))?;
+    Ok(HttpResponse::Ok().json(DataDto::from(name)))
+}
+```
+
+See [`coi-actix-sample`] for a more involved example.
+
+[`coi-actix-sample`]: https://github.com/Nashenas88/coi-actix-sample
 
 #### License
 
