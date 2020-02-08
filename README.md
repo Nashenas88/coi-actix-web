@@ -1,6 +1,6 @@
-# coi-derive
+# coi-actix-web
 
-[![Build Status](https://travis-ci.org/Nashenas88/coi.svg?branch=master)](https://travis-ci.org/Nashenas88/coi)
+[![Build Status](https://travis-ci.org/Nashenas88/coi-actix-web.svg?branch=master)](https://travis-ci.org/Nashenas88/coi-actix-web)
 [![docs.rs](https://docs.rs/coi-actix-web/badge.svg)](https://docs.rs/coi-actix-web)
 [![crates.io](https://img.shields.io/crates/v/coi-actix-web.svg)](https://crates.io/crates/coi-actix-web)
 
