@@ -4,7 +4,7 @@ version = "0.3.0"
 authors = ["Paul Daniel Faria <Nashenas88@users.noreply.github.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/Nashenas88/coi"
+repository = "https://github.com/Nashenas88/coi-actix-web"
 description = "coi-actix-web provides integration support between coi and actix-web"
 readme = "README.md"
 
