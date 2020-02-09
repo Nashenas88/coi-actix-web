@@ -1,5 +1,5 @@
 //! Provides the `inject` proc macro for use by the [`coi-actix-web`] crate.
-//! 
+//!
 //! [`coi-actix-web`]: https://docs.rs/coi-actix-web
 
 extern crate proc_macro;
@@ -37,19 +37,19 @@ fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
 
 /// The #[inject] proc macro should only be applied to functions that will
 /// be passed to [`actix-web`]'s routing APIs.
-/// 
+///
 /// [`actix-web`]: https://docs.rs/actix-web
-/// 
+///
 /// ## Examples
 /// ```rust,ignore
 /// use coi::inject;
-/// 
+///
 /// #[inject]
 /// async fn get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, ()> {
 ///     ...
 /// }
 /// ```
-/// 
+///
 /// This proc macro changes the input arguments to the fn that it's applied to. All `#[inject]` args
 /// get collected into a single type and are pattern matched out. This is to take advantage of the
 /// [`coi-actix-web`] crate's `FromResponse` impls. By ensuring that all injected types are part of
@@ -58,7 +58,7 @@ fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
 /// this makes manually calling these functions more verbose. Since all of these functions are
 /// expected to be passed to [`actix-web`]'s routing APIs, it's not an issue since those are all
 /// generic.
-/// 
+///
 /// [`coi-actix-web`]: https://docs.rs/coi-actix-web
 /// [`actix-web`]: https://docs.rs/actix-web
 #[proc_macro_attribute]
