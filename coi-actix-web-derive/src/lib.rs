@@ -64,7 +64,6 @@ fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
 #[proc_macro_attribute]
 pub fn inject(_: TokenStream, input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as ItemFn);
-    let fn_ident = input.sig.ident.clone();
     let sig = &mut input.sig;
     let inputs = &mut sig.inputs;
     let mut args = vec![];
@@ -122,43 +121,25 @@ pub fn inject(_: TokenStream, input: TokenStream) -> TokenStream {
         Ok(ty) => ty,
         Err(e) => return e.to_compile_error().into(),
     };
-    let (defs, container_key): (Vec<_>, Vec<_>) = key
-        .iter()
-        .zip(ty.iter())
-        .map(|(key, ty)| {
-            let ident = format_ident!("__{}_{}_Key", fn_ident, key);
-            let key_str = format!("{}", key);
-            (
-                quote! {
-                    #[allow(non_camel_case_types)]
-                    struct #ident;
-                    impl coi::ContainerKey<#ty> for #ident {
-                        const KEY: &'static str = #key_str;
-                    }
-                },
-                ident,
-            )
-        })
-        .unzip();
+    let key_str = key.iter().map(|k| format!("{}", k)).collect::<Vec<_>>();
 
     let injected_arg = if num_args > 1 {
         let injected_n = format_ident!("Injected{}", num_args);
         parse_quote! {
             coi::#injected_n (( #(
                 coi::Injected(#key),
-            )* _ )) :
-            coi::#injected_n<#( #ty, )* #( #container_key, )*>
+            )* )) :
+            coi::#injected_n<#( #ty, )* #( #key_str, )*>
         }
     } else {
         parse_quote! {
-            coi::Injected(#( #key, )* _):
-            coi::Injected<#( Arc<#ty>, )* #( #container_key, )*>
+            coi::Injected(#( #key, )*):
+            coi::Injected<#( Arc<#ty>, )* #( #key_str, )*>
         }
     };
     inputs.push(injected_arg);
 
     let expanded = quote! {
-        #( #defs )*
         #input
     };
     TokenStream::from(expanded)

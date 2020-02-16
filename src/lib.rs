@@ -161,6 +161,9 @@
 //! }
 //! ```
 
+#![allow(incomplete_features)]
+#![feature(const_generics)]
+
 // re-export coi for convenience
 pub use coi::*;
 pub use coi_actix_web_derive::*;
@@ -171,29 +174,20 @@ use actix_web::{
     FromRequest, HttpRequest,
 };
 use futures::future::{err, ok, ready, Ready};
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 
 #[doc(hidden)]
-pub trait ContainerKey<T>
-where
-    T: Inject + ?Sized,
-{
-    const KEY: &'static str;
-}
+pub struct Injected<T, const K: &'static str>(pub T);
 
-#[doc(hidden)]
-pub struct Injected<T, K>(pub T, pub PhantomData<K>);
-
-impl<T, K> Injected<T, K> {
+impl<T, const K: &'static str> Injected<T, {K}> {
     pub fn new(injected: T) -> Self {
-        Self(injected, PhantomData)
+        Self(injected)
     }
 }
 
-impl<T, K> FromRequest for Injected<Arc<T>, K>
+impl<T, const K: &'static str> FromRequest for Injected<Arc<T>, {K}>
 where
     T: Inject + ?Sized,
-    K: ContainerKey<T>,
 {
     type Error = WebError;
     type Future = Ready<WebResult<Self, Self::Error>>;
@@ -205,7 +199,7 @@ where
                 let container = container.scoped();
                 ready(
                     container
-                        .resolve::<T>(K::KEY)
+                        .resolve::<T>(K)
                         .map(Injected::new)
                         .map_err(|e| {
                             log::error!("{}", e);
@@ -222,11 +216,24 @@ where
 }
 
 macro_rules! injected_tuples {
-    ($(($T:ident, $K:ident)),+) => {
-        impl<$($T, $K),+> FromRequest for Injected<($(Arc<$T>),+), ($($K),+)>
+    ($injected:ident, $(($T:ident, $K:ident)),+) => {
+        pub struct $injected<$($T,)+ $(const $K: &'static str,)+> (pub ($(Injected<Arc<$T>, {$K}>),+))
+        where
+            $($T: Inject + ?Sized,)+;
+
+        impl<$($T,)+ $(const $K: &'static str,)+> From<($(Injected<Arc<$T>, {$K}>),+)> for
+            $injected<$($T,)+ $({$K},)+>
+        where
+            $($T: Inject + ?Sized,)+
+        {
+            fn from(tup: ($(Injected<Arc<$T>, {$K}>,)+)) -> Self {
+                Self(tup)
+            }
+        }
+
+        impl<$($T,)+ $(const $K: &'static str,)+> FromRequest for $injected<$($T,)+ $({$K},)+>
         where $(
             $T: Inject + ?Sized,
-            $K: ContainerKey<$T>,
         )+
         {
             type Error = WebError;
@@ -237,16 +244,16 @@ macro_rules! injected_tuples {
                 match req.app_data::<Container>() {
                     Some(container) => {
                         let container = container.scoped();
-                        ok(Injected::new(($(
+                        ok($injected(($(Injected(
                             {
-                                let resolved = container.resolve::<$T>(<$K as ContainerKey<$T>>::KEY)
+                                let resolved = container.resolve::<$T>($K)
                                     .map_err(ErrorInternalServerError);
                                 match resolved {
                                     Ok(r) => r,
                                     Err(e) => return err(e),
                                 }
                             },
-                        )+)))
+                        )),+)))
                     },
                     None => err(ErrorInternalServerError("Container not registered"))
                 }
@@ -255,12 +262,21 @@ macro_rules! injected_tuples {
     }
 }
 
-injected_tuples!((TA, KA), (TB, KB));
-injected_tuples!((TA, KA), (TB, KB), (TC, KC));
-injected_tuples!((TA, KA), (TB, KB), (TC, KC), (TD, KD));
-injected_tuples!((TA, KA), (TB, KB), (TC, KC), (TD, KD), (TE, KE));
-injected_tuples!((TA, KA), (TB, KB), (TC, KC), (TD, KD), (TE, KE), (TF, KF));
+injected_tuples!(Injected2, (TA, KA), (TB, KB));
+injected_tuples!(Injected3, (TA, KA), (TB, KB), (TC, KC));
+injected_tuples!(Injected4, (TA, KA), (TB, KB), (TC, KC), (TD, KD));
+injected_tuples!(Injected5, (TA, KA), (TB, KB), (TC, KC), (TD, KD), (TE, KE));
 injected_tuples!(
+    Injected6,
+    (TA, KA),
+    (TB, KB),
+    (TC, KC),
+    (TD, KD),
+    (TE, KE),
+    (TF, KF)
+);
+injected_tuples!(
+    Injected7,
     (TA, KA),
     (TB, KB),
     (TC, KC),
@@ -270,6 +286,7 @@ injected_tuples!(
     (TG, KG)
 );
 injected_tuples!(
+    Injected8,
     (TA, KA),
     (TB, KB),
     (TC, KC),
@@ -280,6 +297,7 @@ injected_tuples!(
     (TH, KH)
 );
 injected_tuples!(
+    Injected9,
     (TA, KA),
     (TB, KB),
     (TC, KC),
@@ -291,6 +309,7 @@ injected_tuples!(
     (TI, KI)
 );
 injected_tuples!(
+    Injected10,
     (TA, KA),
     (TB, KB),
     (TC, KC),
@@ -303,6 +322,7 @@ injected_tuples!(
     (TJ, KJ)
 );
 injected_tuples!(
+    Injected11,
     (TA, KA),
     (TB, KB),
     (TC, KC),
@@ -315,3 +335,164 @@ injected_tuples!(
     (TJ, KJ),
     (TK, KK)
 );
+
+#[macro_export]
+macro_rules! _injected_helper {
+    ($($key:ident,)+) => {
+        ($(
+            stringify!($key)
+        ),+)
+    };
+}
+
+#[macro_export]
+macro_rules! _injected_name {
+    ( $val:ty => ($($tokens:tt)+)) => {
+        _injected_name!(injected_name!(@tokens $val) <=> ($($tokens)+))
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr,
+        $val6:expr,
+        $val7:expr,
+        $val8:expr,
+        $val9:expr,
+        $val10:expr,
+        $val11:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected11($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr,
+        $val6:expr,
+        $val7:expr,
+        $val8:expr,
+        $val9:expr,
+        $val10:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected10($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr,
+        $val6:expr,
+        $val7:expr,
+        $val8:expr,
+        $val9:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected9($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr,
+        $val6:expr,
+        $val7:expr,
+        $val8:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected8($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr,
+        $val6:expr,
+        $val7:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected7($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr,
+        $val6:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected6($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr,
+        $val5:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected5($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr,
+        $val4:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected4($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr,
+        $val3:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected3($($tokens)+)
+    };
+    (
+        ($val1:expr,
+        $val2:expr) <=>
+        ($($tokens:tt)+)) => {
+        Injected2($($tokens)+)
+    };
+}
+
+#[macro_export]
+macro_rules! injected_ident {
+    {
+        $($key:ident),+
+    } => {
+        _injected_name!(_injected_helper!($($key),+) => (($(Injected($key),)+)))
+    }
+}
+
+#[macro_export]
+macro_rules! ity {
+    {
+        $($key:ident: Arc<$ty:ty>),+
+    } => {
+        ity!($($key:ident: Arc<$ty:ty>,)+)
+    };
+    {
+        $($key:ident: Arc<$ty:ty>,)+
+    } => {
+        _injected_name!(($(
+            stringify!($key)
+        ),+) <=> (($(Injected<Arc<$ty>, stringify!($key)>),+)))
+    }
+}
+
+pub mod prelude {
+    pub use super::inject;
+    pub use super::Injected;
+    pub use super::Injected2;
+    pub use super::Injected3;
+    pub use super::Injected4;
+    pub use super::Injected5;
+    pub use super::Injected6;
+    pub use super::Injected7;
+    pub use super::Injected8;
+    pub use super::Injected9;
+    pub use super::Injected10;
+    pub use super::Injected11;
+}
