@@ -3,12 +3,16 @@
 //! [`coi-actix-web`]: https://docs.rs/coi-actix-web
 
 extern crate proc_macro;
+use crate::attr::Inject;
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     parse_macro_input, parse_quote, Error, FnArg, GenericArgument, Ident, ItemFn, Pat,
     PathArguments, Result, Type, TypePath,
 };
+
+mod attr;
+mod symbols;
 
 fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
     let make_arc_error = || Err(Error::new_spanned(ty, "only Arc<...> can be injected"));
@@ -41,8 +45,8 @@ fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
 /// [`actix-web`]: https://docs.rs/actix-web
 ///
 /// ## Examples
-/// ```rust,ignore
-/// use coi::inject;
+/// ```rust
+/// use coi_actix_web::inject;
 ///
 /// #[inject]
 /// async fn get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, ()> {
@@ -62,7 +66,10 @@ fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
 /// [`coi-actix-web`]: https://docs.rs/coi-actix-web
 /// [`actix-web`]: https://docs.rs/actix-web
 #[proc_macro_attribute]
-pub fn inject(_: TokenStream, input: TokenStream) -> TokenStream {
+pub fn inject(attr: TokenStream, input: TokenStream) -> TokenStream {
+    let attr = parse_macro_input!(attr as Inject);
+    let caw = attr.crate_path;
+
     let mut input = parse_macro_input!(input as ItemFn);
     let fn_ident = input.sig.ident.clone();
     let sig = &mut input.sig;
@@ -132,7 +139,7 @@ pub fn inject(_: TokenStream, input: TokenStream) -> TokenStream {
                 quote! {
                     #[allow(non_camel_case_types)]
                     struct #ident;
-                    impl coi::ContainerKey<#ty> for #ident {
+                    impl #caw::ContainerKey<#ty> for #ident {
                         const KEY: &'static str = #key_str;
                     }
                 },
@@ -144,15 +151,15 @@ pub fn inject(_: TokenStream, input: TokenStream) -> TokenStream {
     let injected_arg = if num_args > 1 {
         let injected_n = format_ident!("Injected{}", num_args);
         parse_quote! {
-            coi::#injected_n (( #(
-                coi::Injected(#key),
+            #caw::#injected_n (( #(
+                #caw::Injected(#key),
             )* _ )) :
-            coi::#injected_n<#( #ty, )* #( #container_key, )*>
+            #caw::#injected_n<#( #ty, )* #( #container_key, )*>
         }
     } else {
         parse_quote! {
-            coi::Injected(#( #key, )* _):
-            coi::Injected<#( Arc<#ty>, )* #( #container_key, )*>
+            #caw::Injected(#( #key, )* _):
+            #caw::Injected<#( ::std::sync::Arc<#ty>, )* #( #container_key, )*>
         }
     };
     inputs.push(injected_arg);

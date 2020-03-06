@@ -11,7 +11,9 @@ readme = "README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+actix-http = "*" # Whatever matches with actix-web
 actix-web = "2.0.0"
+actix-service = "*" # Whatever matches with actix-web
 coi = "0.8.0"
 futures = "0.3.4"
 log = "0.4.8"
@@ -20,3 +22,6 @@ coi-actix-web-derive = { path = "coi-actix-web-derive", version = "0.1.0" }
 [features]
 default = []
 debug = ["coi/debug"]
+
+[patch.crates-io]
+coi = { path = "../coi", version = "0.8.0" }
