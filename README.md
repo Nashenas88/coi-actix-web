@@ -12,7 +12,7 @@ retrieving your dependencies from a `Container` registered with `actix-web`.
 
 ## Example
 
-```rust
+```rust,no_run
 // What this crate provides
 use coi_actix_web::inject;
 
@@ -120,7 +120,7 @@ use coi_actix_web::AppExt as _;
 
 // Your general server setup in "main". The name here is different
 #[actix_rt::main]
-async fn like_main() -> std::io::Result<()> {
+async fn main() -> std::io::Result<()> {
     use actix_web::{App, HttpServer};
     use coi::container;
 

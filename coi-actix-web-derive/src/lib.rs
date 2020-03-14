@@ -45,12 +45,17 @@ fn get_arc_ty(ty: &Type, type_path: &TypePath) -> Result<Type> {
 /// [`actix-web`]: https://docs.rs/actix-web
 ///
 /// ## Examples
-/// ```rust
+/// ```rust,no_run
+/// use actix_web::Responder;
+/// use coi::Inject;
 /// use coi_actix_web::inject;
+///
+/// # trait IService : Inject {}
 ///
 /// #[inject]
 /// async fn get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, ()> {
-///     ...
+///     //...
+///     Ok("Hello, World")
 /// }
 /// ```
 ///
