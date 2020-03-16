@@ -1,6 +1,6 @@
 [package]
 name = "coi-actix-web"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Paul Daniel Faria <Nashenas88@users.noreply.github.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -14,10 +14,10 @@ readme = "README.md"
 actix-http = "*" # Whatever matches with actix-web
 actix-web = "2.0"
 actix-service = "*" # Whatever matches with actix-web
-coi = "0.9.0"
+coi = "0.9.1"
 futures = "0.3.4"
 log = "0.4.8"
-coi-actix-web-derive = { path = "coi-actix-web-derive", version = "0.1.0" }
+coi-actix-web-derive = { path = "coi-actix-web-derive", version = "0.2.0" }
 
 [features]
 default = []
