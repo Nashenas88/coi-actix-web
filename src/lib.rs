@@ -166,6 +166,69 @@ use actix_web::{
 pub trait AppExt {
     /// A helper extension method to ensure the `Container` is
     /// properly registered to work with the `inject` attribute macro.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use coi_actix_web::AppExt as _;
+    /// 
+    /// // Your general server setup in "main". The name here is different
+    /// #[actix_rt::main]
+    /// async fn main() -> std::io::Result<()> {
+    ///     use actix_web::{App, HttpServer};
+    ///     use coi::container;
+    ///
+    ///     // Construct your coi container with your keys and providers
+    ///     // See the coi crate for more details
+    ///     let container = container!{
+    ///         service => ServiceImplProvider; scoped
+    ///     };
+    ///
+    ///     HttpServer::new(move || {
+    ///         App::new()
+    ///         .register_container(container.clone())
+    ///         // ^^^^^^^^^^^^^^^^
+    ///         .service(get)
+    ///     })
+    ///     .bind("127.0.0.1:8000")?
+    ///     .run()
+    ///     .await
+    /// }
+    /// 
+    /// # use coi::{Container, Inject, Provide};
+    /// # use std::sync::Arc;
+    /// # 
+    /// # struct ServiceImpl;
+    /// # 
+    /// # impl Inject for ServiceImpl {}
+    /// # 
+    /// # struct ServiceImplProvider;
+    /// # 
+    /// # impl Provide for ServiceImplProvider {
+    /// # 
+    /// #     type Output = ServiceImpl;
+    /// # 
+    /// #     fn provide(&self, _: &Container) -> coi::Result<Arc<Self::Output>> {
+    /// #         Ok(Arc::new(ServiceImpl))
+    /// #     }
+    /// # }
+    /// # 
+    /// # use actix_web::{get, web, HttpResponse, Responder};
+    /// # 
+    /// # // Add the `inject` attribute to the function you want to inject
+    /// # #[get("/{id}")]
+    /// # #[coi_actix_web::inject]
+    /// # async fn get(
+    /// #     id: web::Path<u64>,
+    /// #     // Add the `inject` field attribute to each attribute you want
+    /// #     // injected
+    /// #     #[inject] service: Arc<ServiceImpl>
+    /// # ) -> Result<impl Responder, ()> {
+    /// #     let _ = service;
+    /// #     Ok(HttpResponse::Ok())
+    /// # }
+    ///  
+    /// ```
     fn register_container(self, container: Container) -> Self;
 }
 

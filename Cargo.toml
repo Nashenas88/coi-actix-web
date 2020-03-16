@@ -22,3 +22,6 @@ coi-actix-web-derive = { path = "coi-actix-web-derive", version = "0.1.0" }
 [features]
 default = []
 debug = ["coi/debug"]
+
+[dev-dependencies]
+actix-rt = "1.0"
