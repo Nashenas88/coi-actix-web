@@ -80,7 +80,7 @@ pub fn inject(attr: TokenStream, input: TokenStream) -> TokenStream {
     let sig = &mut input.sig;
     let inputs = &mut sig.inputs;
     let mut args = vec![];
-    while inputs.len() > 0 {
+    while !inputs.is_empty() {
         if let Some(arg) = inputs.pop() {
             args.push(arg);
         }

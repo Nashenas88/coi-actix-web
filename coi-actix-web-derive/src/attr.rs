@@ -1,15 +1,18 @@
 use crate::symbols::CRATE;
-use syn::{parse::{Parse, ParseStream}, parse_quote, Error, Ident, Path, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_quote, Error, Ident, Path, Token,
+};
 
 pub struct Inject {
-    pub crate_path: Path
+    pub crate_path: Path,
 }
 
 impl Parse for Inject {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         if input.is_empty() {
             return Ok(Self {
-                crate_path: parse_quote!{::coi_actix_web}
+                crate_path: parse_quote! {::coi_actix_web},
             });
         }
         let ident: Ident = input.parse()?;
@@ -20,11 +23,12 @@ impl Parse for Inject {
         let _eq: Token![=] = input.parse()?;
         let crate_path = input.parse()?;
         if input.is_empty() {
-            Ok(Self {
-                crate_path
-            })
+            Ok(Self { crate_path })
         } else {
-            Err(Error::new(input.span(), "unexpected tokens at the end of crate field attribute"))
+            Err(Error::new(
+                input.span(),
+                "unexpected tokens at the end of crate field attribute",
+            ))
         }
     }
 }
