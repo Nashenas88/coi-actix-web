@@ -1,13 +1,8 @@
+#![deny(missing_docs)]
+
 //! This crate provides a simple Dependency Injection framework for `actix-web`.
 //! 
 //! ## Example
-//! 
-//! In `Cargo.toml`:
-//! ```toml
-//! [dependencies]
-//! coi = { package = "coi-actix-web", version = "0.4.0" }
-//! actix-web = "2.0.0"
-//! ```
 //! 
 //! Note that the following example is heavily minified. Files names don't really matter. For a
 //! more involved example, please see the [`coi-actix-sample`] repository.
@@ -69,9 +64,9 @@
 //! 
 //! // derive `Inject` for all structs that will provide the injectable traits.
 //! #[derive(Inject)]
-//! #[provides(pub dyn IService with Service::new(repository))]
+//! #[coi(provides pub dyn IService with Service::new(repository))]
 //! struct Service {
-//!     #[inject]
+//!     #[coi(inject)]
 //!     repository: Arc<dyn IRepository>,
 //! }
 //! 
@@ -95,14 +90,14 @@
 //! use ...::Tls;
 //! 
 //! #[derive(Inject)]
-//! #[provides(pub dyn IRepository with Repository::new(pool))]
+//! #[coi(provides pub dyn IRepository with Repository::new(pool))]
 //! struct Repository {
 //!     #[cfg(feature = "notls")]
-//!     #[inject]
+//!     #[coi(inject)]
 //!     pool: PostgresPool<NoTls>,
 //!
 //!     #[cfg(not(feature = "notls"))]
-//!     #[inject]
+//!     #[coi(inject)]
 //!     pool: PostgresPool<Tls>,
 //! }
 //! 
@@ -116,7 +111,7 @@
 //! }
 //! 
 //! #[derive(Provide)]
-//! #[provides(pub Pool<T> with Pool::new(self.0.pool))]
+//! #[coi(provides pub Pool<T> with Pool::new(self.0.pool))]
 //! struct PoolProvider<T> where T: ... {
 //!     pool: PostgresPool<T>
 //! }
@@ -133,10 +128,10 @@
 //!     web::{self, HttpResponse, ServiceConfig},
 //!     Responder,
 //! };
-//! use coi::inject;
+//! use coi_actix_web::inject;
 //! use std::sync::Arc;
 //! 
-//! #[inject]
+//! #[inject(coi_crate = "coi")]
 //! async fn get(
 //!     id: web::Path<i64>,
 //!     #[inject] service: Arc<dyn IService>,
@@ -145,7 +140,7 @@
 //!     Ok(HttpResponse::Ok().json(name))
 //! }
 //! 
-//! #[inject]
+//! #[inject(coi_crate = "coi")]
 //! async fn get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, ()> {
 //!     let data: Vec<String> = service.get_all().await.map_err(|e| log::error!("{}", e))?;
 //!     Ok(HttpResponse::Ok().json(data))
@@ -161,9 +156,100 @@
 //! }
 //! ```
 
-// re-export coi for convenience
-pub use coi::*;
+use actix_http::error::Error;
+use actix_service::ServiceFactory;
+use actix_web::{
+    dev::*,
+};
+
+/// Extensions to `actix-web`'s `App` struct
+pub trait AppExt {
+    /// A helper extension method to ensure the `Container` is
+    /// properly registered to work with the `inject` attribute macro.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use coi_actix_web::AppExt as _;
+    /// 
+    /// // Your general server setup in "main". The name here is different
+    /// #[actix_rt::main]
+    /// async fn main() -> std::io::Result<()> {
+    ///     use actix_web::{App, HttpServer};
+    ///     use coi::container;
+    ///
+    ///     // Construct your coi container with your keys and providers
+    ///     // See the coi crate for more details
+    ///     let container = container!{
+    ///         service => ServiceImplProvider; scoped
+    ///     };
+    ///
+    ///     HttpServer::new(move || {
+    ///         App::new()
+    ///         .register_container(container.clone())
+    ///         // ^^^^^^^^^^^^^^^^
+    ///         .service(get)
+    ///     })
+    ///     .bind("127.0.0.1:8000")?
+    ///     .run()
+    ///     .await
+    /// }
+    /// 
+    /// # use coi::{Container, Inject, Provide};
+    /// # use std::sync::Arc;
+    /// # 
+    /// # struct ServiceImpl;
+    /// # 
+    /// # impl Inject for ServiceImpl {}
+    /// # 
+    /// # struct ServiceImplProvider;
+    /// # 
+    /// # impl Provide for ServiceImplProvider {
+    /// # 
+    /// #     type Output = ServiceImpl;
+    /// # 
+    /// #     fn provide(&self, _: &Container) -> coi::Result<Arc<Self::Output>> {
+    /// #         Ok(Arc::new(ServiceImpl))
+    /// #     }
+    /// # }
+    /// # 
+    /// # use actix_web::{get, web, HttpResponse, Responder};
+    /// # 
+    /// # // Add the `inject` attribute to the function you want to inject
+    /// # #[get("/{id}")]
+    /// # #[coi_actix_web::inject]
+    /// # async fn get(
+    /// #     id: web::Path<u64>,
+    /// #     // Add the `inject` field attribute to each attribute you want
+    /// #     // injected
+    /// #     #[inject] service: Arc<ServiceImpl>
+    /// # ) -> Result<impl Responder, ()> {
+    /// #     let _ = service;
+    /// #     Ok(HttpResponse::Ok())
+    /// # }
+    ///  
+    /// ```
+    fn register_container(self, container: Container) -> Self;
+}
+
+impl<S, T> AppExt for actix_web::App<S, T>
+where
+S: ServiceFactory<
+    Config = (),
+    Request = ServiceRequest,
+    Response = ServiceResponse<T>,
+    Error = Error,
+    InitError = ()
+>,
+T: MessageBody,
+{
+    fn register_container(self, container: Container) -> Self {
+        self.app_data(container)
+    }
+}
+
 pub use coi_actix_web_derive::*;
+use coi::{Inject, Container};
 
 use actix_web::{
     dev::Payload,
@@ -185,6 +271,7 @@ where
 pub struct Injected<T, K>(pub T, pub PhantomData<K>);
 
 impl<T, K> Injected<T, K> {
+    #[doc(hidden)]
     pub fn new(injected: T) -> Self {
         Self(injected, PhantomData)
     }
