@@ -18,5 +18,5 @@ proc-macro2 = "1.0.8"
 
 [dev-dependencies]
 actix-web = "2.0"
-coi = { version = "0.8" }
+coi = { version = "0.9" }
 coi-actix-web = { path = ".." }
