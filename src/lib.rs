@@ -21,7 +21,9 @@
 //! mod routes;
 //! mod service;
 //! 
+//! # let _s = "
 //! fn main() {
+//! # ";
 //!     // container! only expects identifiers, so construct this provider outside
 //!     let postgres_pool = PoolProvider::<NoTls>::new(/* construct actual pool */);
 //! 
@@ -39,7 +41,9 @@
 //!             .configure(routes::data::route_config)
 //!     })
 //!     ...
+//! # let _ = "
 //! }
+//! # ";
 //! ```
 //! 
 //! `traits.rs`:
