@@ -16,6 +16,6 @@ doc-comment = "0.3.2"
 actix-rt = "1.0.0"
 actix-web = "2.0.0"
 coi-actix-web = { path = ".." }
-coi = "0.9.0"
+coi = "0.10.0"
 futures = "0.3.4"
 serde = "1.0.104"

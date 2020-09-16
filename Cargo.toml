@@ -14,7 +14,7 @@ readme = "README.md"
 actix-http = "1.0"
 actix-web = "2.0"
 actix-service = "1.0"
-coi = "0.9.1"
+coi = "0.10.0"
 futures = "0.3.4"
 log = "0.4.8"
 coi-actix-web-derive = { path = "coi-actix-web-derive", version = "0.2.0" }
