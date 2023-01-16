@@ -17,6 +17,6 @@ quote = "1.0"
 proc-macro2 = "1.0"
 
 [dev-dependencies]
-actix-web = "2.0"
+actix-web = "4.2.1"
 coi = { version = "0.10.0" }
 coi-actix-web = { path = ".." }

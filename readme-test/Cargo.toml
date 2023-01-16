@@ -13,9 +13,9 @@ publish = false
 doc-comment = "0.3.2"
 
 [dev-dependencies]
-actix-rt = "1.0.0"
-actix-web = "2.0.0"
+actix-rt = "2.7.0"
+actix-web = "4.2.1"
 coi-actix-web = { path = ".." }
 coi = "0.10.0"
-futures = "0.3.4"
+futures = "0.3.25"
 serde = "1.0.104"

@@ -160,9 +160,9 @@
 //! }
 //! ```
 
-use actix_http::error::Error;
 use actix_service::ServiceFactory;
-use actix_web::dev::*;
+use actix_web::dev::ServiceRequest;
+use actix_web::Error;
 
 /// Extensions to `actix-web`'s `App` struct
 pub trait AppExt {
@@ -234,16 +234,9 @@ pub trait AppExt {
     fn register_container(self, container: Container) -> Self;
 }
 
-impl<S, T> AppExt for actix_web::App<S, T>
+impl<T> AppExt for actix_web::App<T>
 where
-    S: ServiceFactory<
-        Config = (),
-        Request = ServiceRequest,
-        Response = ServiceResponse<T>,
-        Error = Error,
-        InitError = (),
-    >,
-    T: MessageBody,
+    T: ServiceFactory<ServiceRequest, Config = (), Error = Error, InitError = ()>,
 {
     fn register_container(self, container: Container) -> Self {
         self.app_data(container)
@@ -253,13 +246,12 @@ where
 use coi::{Container, Inject};
 pub use coi_actix_web_derive::*;
 
-use actix_web::{
-    dev::Payload,
-    error::{Error as WebError, ErrorInternalServerError, Result as WebResult},
-    FromRequest, HttpRequest,
-};
+use actix_web::dev::Payload;
+use actix_web::error::ErrorInternalServerError;
+use actix_web::{Error as WebError, FromRequest, HttpRequest};
 use futures::future::{err, ok, ready, Ready};
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 #[doc(hidden)]
 pub trait ContainerKey<T>
@@ -285,8 +277,7 @@ where
     K: ContainerKey<T>,
 {
     type Error = WebError;
-    type Future = Ready<WebResult<Self, Self::Error>>;
-    type Config = ();
+    type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         match req.app_data::<Container>() {
@@ -296,16 +287,10 @@ where
                     container
                         .resolve::<T>(K::KEY)
                         .map(Injected::new)
-                        .map_err(|e| {
-                            log::error!("{}", e);
-                            ErrorInternalServerError("huh")
-                        }),
+                        .map_err(ErrorInternalServerError),
                 )
             }
-            None => {
-                log::error!("Container not registered");
-                err(ErrorInternalServerError("huh2"))
-            }
+            None => err(ErrorInternalServerError("Container not registered")),
         }
     }
 }
@@ -314,13 +299,12 @@ macro_rules! injected_tuples {
     ($(($T:ident, $K:ident)),+) => {
         impl<$($T, $K),+> FromRequest for Injected<($(Arc<$T>),+), ($($K),+)>
         where $(
-            $T: Inject + ?Sized,
+            $T: Inject + ?Sized + 'static,
             $K: ContainerKey<$T>,
         )+
         {
             type Error = WebError;
-            type Future = Ready<WebResult<Self, Self::Error>>;
-            type Config = ();
+            type Future = Ready<Result<Self, Self::Error>>;
 
             fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
                 match req.app_data::<Container>() {
