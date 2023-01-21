@@ -6,8 +6,8 @@
 
 Dependency Injection in Rust
 
-This crate provides integration support between `coi` and `actix-web`. It
-exposes an `inject` procedural attribute macro to generate the code for
+This crate provides integration support between `coi` and `actix-web` version 4.
+It exposes an `inject` procedural attribute macro to generate the code for
 retrieving your dependencies from a `Container` registered with `actix-web`.
 
 ## Example
