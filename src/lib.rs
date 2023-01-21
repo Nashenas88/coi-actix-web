@@ -128,10 +128,8 @@
 //! `routes.rs`
 //! ```rust,ignore
 //! use crate::service::IService;
-//! use actix_web::{
-//!     web::{self, HttpResponse, ServiceConfig},
-//!     Responder,
-//! };
+//! use actix_web::{Error, HttpResponse, Responder};
+//! use actix_web::web::{self, ServiceConfig};
 //! use coi_actix_web::inject;
 //! use std::sync::Arc;
 //!
@@ -139,14 +137,14 @@
 //! async fn get(
 //!     id: web::Path<i64>,
 //!     #[inject] service: Arc<dyn IService>,
-//! ) -> Result<impl Responder, ()> {
-//!     let name: String = service.get(*id).await.map_err(|e| log::error!("{}", e))?;
+//! ) -> Result<impl Responder, Error> {
+//!     let name: String = service.get(*id).await?;
 //!     Ok(HttpResponse::Ok().json(name))
 //! }
 //!
 //! #[inject(coi_crate = "coi")]
-//! async fn get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, ()> {
-//!     let data: Vec<String> = service.get_all().await.map_err(|e| log::error!("{}", e))?;
+//! async fn get_all(#[inject] service: Arc<dyn IService>) -> Result<impl Responder, Error> {
+//!     let data: Vec<String> = service.get_all().await?;
 //!     Ok(HttpResponse::Ok().json(data))
 //! }
 //!
@@ -215,7 +213,7 @@ pub trait AppExt {
     /// #     }
     /// # }
     /// #
-    /// # use actix_web::{get, web, HttpResponse, Responder};
+    /// # use actix_web::{get, web, Error, HttpResponse, Responder};
     /// #
     /// # // Add the `inject` attribute to the function you want to inject
     /// # #[get("/{id}")]
@@ -225,7 +223,7 @@ pub trait AppExt {
     /// #     // Add the `inject` field attribute to each attribute you want
     /// #     // injected
     /// #     #[inject] service: Arc<ServiceImpl>
-    /// # ) -> Result<impl Responder, ()> {
+    /// # ) -> Result<impl Responder, Error> {
     /// #     let _ = service;
     /// #     Ok(HttpResponse::Ok())
     /// # }

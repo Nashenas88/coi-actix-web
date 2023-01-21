@@ -17,7 +17,7 @@ retrieving your dependencies from a `Container` registered with `actix-web`.
 use coi_actix_web::inject;
 
 // What's needed for the example fn below
-use actix_web::{get, web::{self, HttpResponse}, Responder};
+use actix_web::{get, web, Error, HttpResponse, Responder};
 use std::sync::Arc;
 
 // Add the `inject` attribute to the function you want to inject
@@ -28,7 +28,7 @@ async fn get(
     // Add the `inject` field attribute to each attribute you want
     // injected
     #[inject] service: Arc<dyn IService>
-) -> Result<impl Responder, ()> {
+) -> Result<impl Responder, Error> {
     let data = service.get(*id).await?;
     Ok(HttpResponse::Ok().json(DataDto::from(data)))
 }
@@ -52,17 +52,40 @@ impl DataDto {
 
 // An example of what's usually needed to make effective use of this
 // crate is below
+use actix_web::ResponseError;
 use coi::Inject;
 use futures::future::{ready, BoxFuture};
+use futures::FutureExt;
 
 // This section shows coi being put to use
 // It's very important that the version of coi and the version
 // of coi-actix-web used match since coi-actix-web implements
 // some coi traits
 
+#[derive(Debug)]
+enum ServiceError {
+    Repo(RepoError),
+}
+
+impl ResponseError for ServiceError {}
+
+impl From<RepoError> for ServiceError {
+    fn from(err: RepoError) -> Self {
+        Self::Repo(err)
+    }
+}
+
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            ServiceError::Repo(r) => write!(f, "Repo({})", r),
+        }
+    }
+}
+
 // Here we're marking a trait as injectable
 trait IService: Inject {
-    fn get(&self, id: u64) -> BoxFuture<Result<Data, ()>>;
+    fn get(&self, id: u64) -> BoxFuture<Result<Data, ServiceError>>;
 }
 
 // And here we're marking a type that's capable of providing the
@@ -85,8 +108,11 @@ impl ServiceImpl {
 
 // Normal impl of trait for struct
 impl IService for ServiceImpl {
-    fn get(&self, id: u64) -> BoxFuture<Result<Data, ()>> {
-        self.repo.read_from_db(id)
+    fn get(&self, id: u64) -> BoxFuture<Result<Data, ServiceError>> {
+        async move {
+            let data = self.repo.read_from_db(id).await?;
+            Ok(data)
+        }.boxed()
     }
 }
 
@@ -96,9 +122,19 @@ struct Data {
     name: String,
 }
 
+#[derive(Debug)]
+struct RepoError;
+impl ResponseError for RepoError {}
+
+impl std::fmt::Display for RepoError {
+    fn fmt(&self, f: &mut std::fmt::Formatter)  -> Result<(), std::fmt::Error> {
+        write!(f, "RepoError")
+    }
+}
+
 // Here's the trait from above
 trait IRepo: Inject {
-    fn read_from_db(&self, id: u64) -> BoxFuture<Result<Data, ()>>;
+    fn read_from_db(&self, id: u64) -> BoxFuture<Result<Data, RepoError>>;
 }
 
 // And it's setup below
@@ -107,7 +143,7 @@ trait IRepo: Inject {
 struct RepoImpl;
 
 impl IRepo for RepoImpl {
-    fn read_from_db(&self, id: u64) -> BoxFuture<Result<Data, ()>> {
+    fn read_from_db(&self, id: u64) -> BoxFuture<Result<Data, RepoError>> {
         Box::pin(ready(Ok(Data {
             id,
             name: format!("{}'s name...", id)
