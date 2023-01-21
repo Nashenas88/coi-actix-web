@@ -154,12 +154,9 @@ pub fn inject(attr: TokenStream, input: TokenStream) -> TokenStream {
         .unzip();
 
     let injected_arg = if num_args > 1 {
-        let injected_n = format_ident!("Injected{}", num_args);
         parse_quote! {
-            #caw::#injected_n (( #(
-                #caw::Injected(#key),
-            )* _ )) :
-            #caw::#injected_n<#( #ty, )* #( #container_key, )*>
+            #caw::Injected((#( #key, )*), _):
+            #caw::Injected<(#( ::std::sync::Arc<#ty>, )*), (#( #container_key, )*)>
         }
     } else {
         parse_quote! {
